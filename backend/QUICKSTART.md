@@ -94,3 +94,4 @@ npm run dev
 - Ensure file type is supported (PDF, DOCX, JPG, PNG)
 - Check `uploads/` directory has write permissions
 
+

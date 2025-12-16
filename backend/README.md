@@ -139,3 +139,4 @@ Risk score is calculated based on the number and severity of identified risks (0
 - OCR processing may take time for large images or scanned documents
 - Ensure MongoDB is running before starting the server
 
+

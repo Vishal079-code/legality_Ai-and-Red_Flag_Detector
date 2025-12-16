@@ -58,3 +58,4 @@ const RiskCard = ({ risk, onClick }) => {
 
 export default RiskCard;
 
+

@@ -174,3 +174,4 @@ const UploadBox = ({ onFileSelect, acceptedTypes = '.pdf,.doc,.docx,.jpg,.jpeg,.
 
 export default UploadBox;
 
+

@@ -59,6 +59,18 @@ export const uploadDocument = async (req, res) => {
     // Analyze the extracted text
     const { clauses, riskScore } = analyzeText(extractedText);
 
+    // For PDF files, keep the original file for report generation
+    // For other file types, we can delete after processing
+    let permanentFilePath = null;
+    
+    if (mimeType === 'application/pdf') {
+      // Move PDF to permanent storage for report generation
+      const storageDir = path.join(__dirname, '../storage');
+      await fs.mkdir(storageDir, { recursive: true });
+      permanentFilePath = path.join(storageDir, `${Date.now()}-${fileName}`);
+      await fs.rename(filePath, permanentFilePath);
+    }
+    
     // Save to database
     const document = new Document({
       text: extractedText,
@@ -66,12 +78,15 @@ export const uploadDocument = async (req, res) => {
       riskScore,
       fileName,
       fileType: mimeType,
+      originalFilePath: permanentFilePath || filePath, // Store path for PDF generation
     });
 
     await document.save();
-
-    // Clean up uploaded file after processing
-    await fs.unlink(filePath).catch(console.error);
+    
+    // Clean up uploaded file if not PDF (PDFs are kept for report generation)
+    if (mimeType !== 'application/pdf') {
+      await fs.unlink(filePath).catch(console.error);
+    }
 
     console.log(`Document processed successfully. ID: ${document._id}, Risks found: ${clauses.length}`);
 
@@ -95,4 +110,5 @@ export const uploadDocument = async (req, res) => {
     });
   }
 };
+
 

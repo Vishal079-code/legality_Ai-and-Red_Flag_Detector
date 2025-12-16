@@ -102,3 +102,4 @@ const ClauseHighlighter = ({ text, risks = [] }) => {
 
 export default ClauseHighlighter;
 
+

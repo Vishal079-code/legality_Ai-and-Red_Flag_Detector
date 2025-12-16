@@ -261,3 +261,4 @@ const calculateRiskScore = (clauses) => {
   return Math.round(finalScore);
 };
 
+

@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import multer from 'multer';
 import connectDB from './config/db.js';
 import uploadRoutes from './routes/uploadRoutes.js';
-import analysisRoutes from './routes/analysisRoutes.js';
+import analysisRoutes, { reportRouter } from './routes/analysisRoutes.js';
 
 // Load environment variables
 dotenv.config();
@@ -32,6 +32,7 @@ app.get('/health', (req, res) => {
 // API Routes
 app.use('/upload', uploadRoutes);
 app.use('/analysis', analysisRoutes);
+app.use('/report', reportRouter);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
