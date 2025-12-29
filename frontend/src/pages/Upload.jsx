@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import UploadBox from '../components/UploadBox';
 import Loader from '../components/Loader';
-import { uploadDocument } from '../services/api';
+import { analyzeDocument } from '../services/api';
 
 const Upload = () => {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -25,15 +25,17 @@ const Upload = () => {
     setError(null);
 
     try {
-      const result = await uploadDocument(selectedFile);
+      const result = await analyzeDocument(selectedFile);
       
-      if (result.documentId) {
-        navigate(`/analysis/${result.documentId}`);
+      if (result) {
+        // Navigate to analysis page with the response data in state
+        // Using 'result' as documentId to match existing route pattern
+        navigate('/analysis/result', { state: { analysisData: result } });
       } else {
-        throw new Error('No document ID received from server');
+        throw new Error('No analysis data received from server');
       }
     } catch (err) {
-      setError(err.message || 'Failed to upload document. Please try again.');
+      setError(err.message || 'Failed to analyze document. Please try again.');
       setIsUploading(false);
     }
   };

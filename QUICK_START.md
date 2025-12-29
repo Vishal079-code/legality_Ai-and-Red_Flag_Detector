@@ -184,3 +184,4 @@ npm run build       # Creates dist/ folder
 - Check `frontend/README.md` for frontend details
 - Check `backend/INTEGRATION_GUIDE.md` for Python model integration
 
+

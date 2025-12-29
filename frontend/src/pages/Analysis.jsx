@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import Loader from '../components/Loader';
 import ClauseHighlighter from '../components/ClauseHighlighter';
 import RiskCard from '../components/RiskCard';
-import { fetchAnalysis, downloadPDFReport } from '../services/api';
+import { openHighlightedPDF } from '../services/api';
 
 const Analysis = () => {
-  const { documentId } = useParams();
+  const location = useLocation();
   const [analysisData, setAnalysisData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -14,35 +14,112 @@ const Analysis = () => {
   const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
-    const loadAnalysis = async () => {
-      if (!documentId) {
-        setError('No document ID provided');
-        setLoading(false);
-        return;
-      }
+    // Get analysis data from navigation state
+    const data = location.state?.analysisData;
+    
+    if (!data) {
+      setError('No analysis data available. Please upload a document first.');
+      setLoading(false);
+      return;
+    }
 
-      try {
-        const data = await fetchAnalysis(documentId);
-        setAnalysisData(data);
-      } catch (err) {
-        setError(err.message || 'Failed to load analysis. Please try again.');
-      } finally {
-        setLoading(false);
+    try {
+      // Map new backend response to existing UI format
+      const mappedData = mapBackendResponseToUI(data);
+      setAnalysisData(mappedData);
+    } catch (err) {
+      setError(err.message || 'Failed to process analysis data.');
+    } finally {
+      setLoading(false);
+    }
+  }, [location.state]);
+
+  // Map new backend response structure to existing UI expectations
+  const mapBackendResponseToUI = (backendData) => {
+    const { document_risk, label_summary, clauses = [], highlighted_pdf_url } = backendData;
+
+    // Combine all clause texts into extracted text
+    // Build text and track positions for accurate highlighting
+    let extractedText = '';
+    const clausePositions = [];
+    
+    clauses.forEach((clause) => {
+      const startPos = extractedText.length;
+      clausePositions.push({
+        clause,
+        start: startPos,
+        end: startPos + clause.clause_text.length,
+      });
+      extractedText += (extractedText ? '\n\n' : '') + clause.clause_text;
+    });
+
+    // Transform clauses and labels into risks array
+    const risks = [];
+    clauses.forEach((clause, clauseIndex) => {
+      if (clause.labels && clause.labels.length > 0) {
+        clause.labels.forEach((label) => {
+          // Map band to risk level (high/medium/low)
+          const riskLevel = label.band === 'high' ? 'High' : 
+                           label.band === 'medium' ? 'Medium' : 'Low';
+          
+          // Find position in extracted text
+          const position = clausePositions[clauseIndex];
+          const startIndex = position ? position.start : 0;
+          const endIndex = position ? position.end : clause.clause_text.length;
+          
+          risks.push({
+            level: riskLevel,
+            riskLevel: riskLevel,
+            title: label.label || 'Risk Detected',
+            clause: clause.clause_text,
+            reason: `Semantic score: ${(label.semantic_score * 100).toFixed(1)}%, Final score: ${(label.final_score * 100).toFixed(1)}%`,
+            description: `Page ${clause.page_no || 'N/A'}: ${clause.clause_text.substring(0, 100)}${clause.clause_text.length > 100 ? '...' : ''}`,
+            clauseNumber: clauseIndex + 1,
+            pageNo: clause.page_no,
+            semanticScore: label.semantic_score,
+            finalScore: label.final_score,
+            identity: clause.identity,
+            semantic: clause.semantic,
+            margin: clause.margin,
+            // For highlighting - position in extracted text
+            startIndex,
+            endIndex,
+          });
+        });
       }
+    });
+
+    return {
+      document_risk: document_risk || 'unknown',
+      label_summary: label_summary || {},
+      highlighted_pdf_url,
+      extractedText: extractedText || 'No text extracted from document.',
+      risks,
+      originalClauses: clauses, // Keep original for reference if needed
     };
+  };
 
-    loadAnalysis();
-  }, [documentId]);
-
-  const handleDownloadReport = async () => {
+  const handleDownloadReport = () => {
+    if (!analysisData?.highlighted_pdf_url) {
+      alert('No highlighted PDF available.');
+      return;
+    }
     setIsDownloading(true);
     try {
-      await downloadPDFReport(documentId);
+      openHighlightedPDF(analysisData.highlighted_pdf_url, true);
     } catch (err) {
-      alert('Failed to download report. Please try again.');
+      alert('Failed to download PDF. Please try again.');
     } finally {
       setIsDownloading(false);
     }
+  };
+
+  const handleOpenPDF = () => {
+    if (!analysisData?.highlighted_pdf_url) {
+      alert('No highlighted PDF available.');
+      return;
+    }
+    openHighlightedPDF(analysisData.highlighted_pdf_url, false);
   };
 
   const filteredRisks = analysisData?.risks
@@ -142,44 +219,72 @@ const Analysis = () => {
                 </div>
               </div>
 
-              {/* Download Button */}
-              <button
-                onClick={handleDownloadReport}
-                disabled={isDownloading}
-                className={`w-full px-4 py-3 rounded-lg font-semibold transition-colors ${
-                  isDownloading
-                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    : 'bg-green-600 text-white hover:bg-green-700 shadow-lg hover:shadow-xl'
-                }`}
-              >
-                {isDownloading ? (
-                  <span className="flex items-center justify-center">
-                    <svg
-                      className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      ></path>
-                    </svg>
-                    Downloading...
+              {/* Document Risk Level */}
+              {analysisData?.document_risk && (
+                <div className="mb-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-1">
+                    Document Risk Level
+                  </h3>
+                  <span className={`text-lg font-bold ${
+                    analysisData.document_risk === 'high_risk' 
+                      ? 'text-red-600' 
+                      : analysisData.document_risk === 'medium_risk'
+                      ? 'text-yellow-600'
+                      : 'text-blue-600'
+                  }`}>
+                    {analysisData.document_risk.replace('_', ' ').toUpperCase()}
                   </span>
-                ) : (
-                  'Download PDF Report'
-                )}
-              </button>
+                </div>
+              )}
+
+              {/* PDF Actions */}
+              {analysisData?.highlighted_pdf_url && (
+                <div className="space-y-2 mb-6">
+                  <button
+                    onClick={handleOpenPDF}
+                    className="w-full px-4 py-3 rounded-lg font-semibold transition-colors bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl"
+                  >
+                    Open Highlighted PDF
+                  </button>
+                  <button
+                    onClick={handleDownloadReport}
+                    disabled={isDownloading}
+                    className={`w-full px-4 py-3 rounded-lg font-semibold transition-colors ${
+                      isDownloading
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-green-600 text-white hover:bg-green-700 shadow-lg hover:shadow-xl'
+                    }`}
+                  >
+                    {isDownloading ? (
+                      <span className="flex items-center justify-center">
+                        <svg
+                          className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Downloading...
+                      </span>
+                    ) : (
+                      'Download Highlighted PDF'
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
