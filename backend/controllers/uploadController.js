@@ -1,114 +1,46 @@
-import fs from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { extractText } from '../services/ocr.js';
-import { analyzeText } from '../services/analyzer.js';
-import Document from '../models/Document.js';
+import axios from "axios";
+import fs from "fs";
+import FormData from "form-data";
+import Document from "../models/Document.js";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Ensure uploads directory exists
-const uploadsDir = path.join(__dirname, '../uploads');
-fs.mkdir(uploadsDir, { recursive: true }).catch(console.error);
-
-/**
- * Handle file upload, OCR, and analysis
- */
 export const uploadDocument = async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: 'No file uploaded',
-      });
+      return res.status(400).json({ message: "No file uploaded" });
     }
 
-    const filePath = req.file.path;
-    const mimeType = req.file.mimetype;
-    const fileName = req.file.originalname;
+    // Send file to FastAPI
+    const form = new FormData();
+    form.append("file", fs.createReadStream(req.file.path));
 
-    console.log(`Processing file: ${fileName}, Type: ${mimeType}`);
-
-    // Extract text using OCR
-    let extractedText;
-    try {
-      extractedText = await extractText(filePath, mimeType);
-      
-      if (!extractedText || extractedText.trim().length === 0) {
-        // Clean up uploaded file
-        await fs.unlink(filePath);
-        
-        return res.status(400).json({
-          success: false,
-          message: 'Could not extract text from the document. Please ensure the document contains readable text.',
-        });
+    const fastapiRes = await axios.post(
+      `${process.env.COLAB_URL}/analyze`,
+      form,
+      {
+        headers: form.getHeaders(),
+        timeout: 60000,
       }
-    } catch (ocrError) {
-      // Clean up uploaded file
-      await fs.unlink(filePath).catch(console.error);
-      
-      console.error('OCR Error:', ocrError);
-      return res.status(500).json({
-        success: false,
-        message: 'Error extracting text from document',
-        error: ocrError.message,
-      });
-    }
+    );
 
-    // Analyze the extracted text
-    const { clauses, riskScore } = analyzeText(extractedText);
-
-    // For PDF files, keep the original file for report generation
-    // For other file types, we can delete after processing
-    let permanentFilePath = null;
-    
-    if (mimeType === 'application/pdf') {
-      // Move PDF to permanent storage for report generation
-      const storageDir = path.join(__dirname, '../storage');
-      await fs.mkdir(storageDir, { recursive: true });
-      permanentFilePath = path.join(storageDir, `${Date.now()}-${fileName}`);
-      await fs.rename(filePath, permanentFilePath);
-    }
-    
-    // Save to database
-    const document = new Document({
-      text: extractedText,
-      clauses,
-      riskScore,
-      fileName,
-      fileType: mimeType,
-      originalFilePath: permanentFilePath || filePath, // Store path for PDF generation
+    // Save final result
+    const doc = await Document.create({
+      originalName: req.file.originalname,
+      filePath: req.file.path,
+      text: fastapiRes.data.text,
+      clauses: fastapiRes.data.clauses,
+      riskScore: fastapiRes.data.risk_score,
+      analysisId: fastapiRes.data.analysis_id,
+      status: "analyzed",
     });
 
-    await document.save();
-    
-    // Clean up uploaded file if not PDF (PDFs are kept for report generation)
-    if (mimeType !== 'application/pdf') {
-      await fs.unlink(filePath).catch(console.error);
-    }
-
-    console.log(`Document processed successfully. ID: ${document._id}, Risks found: ${clauses.length}`);
-
+    // 🚀 SEND RESULT TO FRONTEND
     res.status(200).json({
-      success: true,
-      documentId: document._id.toString(),
-      message: 'Document uploaded and analyzed successfully',
+      documentId: doc._id,
+      result: fastapiRes.data,
     });
-  } catch (error) {
-    console.error('Upload error:', error);
-    
-    // Clean up uploaded file if it exists
-    if (req.file?.path) {
-      await fs.unlink(req.file.path).catch(console.error);
-    }
 
-    res.status(500).json({
-      success: false,
-      message: 'Error processing document',
-      error: error.message,
-    });
+  } catch (err) {
+    console.error("UPLOAD+ANALYZE ERROR:", err.response?.data || err.message);
+    res.status(500).json({ message: "Upload & analysis failed" });
   }
 };
-
-

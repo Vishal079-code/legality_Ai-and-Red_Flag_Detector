@@ -1,58 +1,65 @@
-import Document from '../models/Document.js';
+import axios from "axios";
+import FormData from "form-data";
+import fs from "fs";
+import Document from "../models/Document.js";
 
-/**
- * Get analysis results for a document
- */
-export const getAnalysis = async (req, res) => {
+const COLAB_URL = process.env.COLAB_URL;
+
+export const uploadAndAnalyze = async (req, res) => {
   try {
-    const { id } = req.params;
-
-    if (!id) {
-      return res.status(400).json({
-        success: false,
-        message: 'Document ID is required',
-      });
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
     }
 
-    const document = await Document.findById(id);
+    const form = new FormData();
+    form.append("file", fs.createReadStream(req.file.path));
 
-    if (!document) {
-      return res.status(404).json({
-        success: false,
-        message: 'Document not found',
-      });
-    }
+    const response = await axios.post(
+      `${COLAB_URL}/analyze`,
+      form,
+      {
+        headers: form.getHeaders(),
+        timeout: 3000000 // 5 minutes
+      }
+    );
 
-    // Format response to match frontend expectations
-    const response = {
-      success: true,
-      extractedText: document.text,
-      risks: document.clauses.map((clause) => ({
-        text: clause.text,
-        level: clause.level,
-        riskLevel: clause.level, // Alias for frontend compatibility
-        reason: clause.reason,
-        description: clause.reason, // Alias for frontend compatibility
-        category: clause.category,
-        startIndex: clause.startIndex,
-        endIndex: clause.endIndex,
-        start: clause.startIndex, // Alias for frontend compatibility
-        end: clause.endIndex, // Alias for frontend compatibility
-      })),
-      riskScore: document.riskScore,
-      documentId: document._id.toString(),
-      createdAt: document.createdAt,
-    };
+    const result = response.data;
 
-    res.status(200).json(response);
-  } catch (error) {
-    console.error('Analysis error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching analysis',
-      error: error.message,
+    const savedDoc = await Document.create({
+      fileName: req.file.originalname,
+      extractedText: result.extracted_text,
+      risks: result.risks,
+      riskScore: result.risk_score,
+      analysisId: result.analysis_id,
+      raw: result
     });
+
+    res.status(201).json({
+      documentId: savedDoc._id
+    });
+
+  } catch (err) {
+    console.error("UPLOAD+ANALYZE ERROR:", err.message);
+    res.status(500).json({ message: "Analysis failed" });
   }
 };
 
+export const getAnalysis = async (req, res) => {
+  try {
+    const doc = await Document.findById(req.params.id);
 
+    if (!doc) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    res.json({
+      extractedText: doc.extractedText,
+      risks: doc.risks,
+      riskScore: doc.riskScore
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch analysis" });
+  }
+};

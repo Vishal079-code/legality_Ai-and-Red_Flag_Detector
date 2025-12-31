@@ -1,73 +1,38 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const clauseSchema = new mongoose.Schema({
-  text: {
-    type: String,
-    required: true,
-  },
-  level: {
-    type: String,
-    enum: ['High', 'Medium', 'Low'],
-    required: true,
-  },
-  reason: {
-    type: String,
-    required: true,
-  },
-  category: {
-    type: String,
-    required: true,
-  },
-  startIndex: {
-    type: Number,
-    default: 0,
-  },
-  endIndex: {
-    type: Number,
-    default: 0,
-  },
+  text: String,
+  level: String,
+  reason: String,
+  category: String,
+  startIndex: Number,
+  endIndex: Number
 });
 
-const documentSchema = new mongoose.Schema(
-  {
-    text: {
-      type: String,
-      required: true,
-    },
-    clauses: {
-      type: [clauseSchema],
-      default: [],
-    },
-    riskScore: {
-      type: Number,
-      required: true,
-      min: 0,
-      max: 100,
-    },
-    fileName: {
-      type: String,
-      default: '',
-    },
-    fileType: {
-      type: String,
-      default: '',
-    },
-    originalFilePath: {
-      type: String,
-      default: '',
-    },
-    reportGenerated: {
-      type: Boolean,
-      default: false,
-    },
+const documentSchema = new mongoose.Schema({
+  fileName: String,
+
+  extractedText: {
+    type: String,
+    default: ""
   },
-  {
-    timestamps: true,
-  }
-);
 
-const Document = mongoose.model('Document', documentSchema);
+  risks: {
+    type: [clauseSchema],
+    default: []
+  },
 
-export default Document;
+  riskScore: {
+    type: Number,
+    default: 0
+  },
 
+  analysisId: {
+    type: String,
+    default: ""
+  },
 
+  raw: Object
+}, { timestamps: true });
+
+export default mongoose.model("Document", documentSchema);
