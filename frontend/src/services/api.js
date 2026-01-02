@@ -1,7 +1,5 @@
 // FastAPI service URL (ngrok tunnel)
 const FASTAPI_BASE_URL = import.meta.env.VITE_FASTAPI_BASE_URL || 'https://kaleigh-unprovided-unreciprocally.ngrok-free.dev';
-// Legacy backend URL (if still needed)
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 /**
  * Analyze a PDF document
