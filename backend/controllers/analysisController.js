@@ -1,7 +1,9 @@
 import Document from '../models/Document.js';
 
 /**
- * Get analysis results for a document
+ * Get analysis results for a document from database
+ * NOTE: This only retrieves stored data. NO TEXT EXTRACTION OR PREPROCESSING is done here.
+ * All text extraction and analysis is handled by app/ FastAPI service.
  */
 export const getAnalysis = async (req, res) => {
   try {

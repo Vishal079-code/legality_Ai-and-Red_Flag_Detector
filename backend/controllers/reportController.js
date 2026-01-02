@@ -2,13 +2,14 @@ import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import Document from '../models/Document.js';
-import { generatePDFReport } from '../services/pythonService.js';
+// Note: pythonService removed - use app/ FastAPI service instead
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * Generate and download PDF report with highlighted risks
+ * Generate and download PDF report
+ * Note: PDF highlighting is done in app/ directory only
  */
 export const downloadPDFReport = async (req, res) => {
   try {
@@ -42,32 +43,14 @@ export const downloadPDFReport = async (req, res) => {
       // Report doesn't exist, generate it
     }
 
-    // Try to use Python model if original PDF is available
-    if (document.originalFilePath) {
-      try {
-        // Use Python model service to generate highlighted PDF
-        const result = await generatePDFReport(document.originalFilePath, id);
-        
-        if (result.success && result.reportPath) {
-          // Update document to mark report as generated
-          document.reportGenerated = true;
-          await document.save();
-          
-          return sendPDFReport(res, result.reportPath, id);
-        }
-      } catch (pythonError) {
-        console.error('Python model error:', pythonError);
-        // Fall through to fallback
-      }
-    }
+    // TODO: Integrate with app/ FastAPI service for PDF highlighting
+    // The app/ directory contains the complete PDF highlighting implementation
+    // This should call the FastAPI service at /highlight/{analysis_id} endpoint
     
-    // Fallback: If Python model not available or failed
-    // You can implement a Node.js-based PDF generation here
-    // For now, return error asking to integrate Python model
     return res.status(503).json({
       success: false,
-      message: 'PDF report generation requires Python model integration. Please integrate your model in backend/python/model_service.py',
-      hint: 'Store original PDF file path in document.originalFilePath for PDF generation',
+      message: 'PDF report generation requires integration with app/ FastAPI service. Use /highlight/{analysis_id} endpoint from the FastAPI service.',
+      hint: 'The app/ directory contains the complete implementation - integrate it via HTTP calls',
     });
   } catch (error) {
     console.error('Report generation error:', error);
@@ -92,41 +75,6 @@ const sendPDFReport = (res, reportPath, documentId) => {
   return res.sendFile(reportPath);
 };
 
-/**
- * Generate a simple text-based PDF report (fallback)
- * Replace this with your Python model integration
- */
-const generateTextBasedReport = async (document, outputPath) => {
-  // This is a placeholder - replace with actual PDF generation
-  // You can use libraries like pdfkit or call your Python model
-  
-  // For now, create a simple text file as placeholder
-  // In production, use your Python model's generate_highlighted_pdf function
-  const reportContent = `
-LEGALITY AI RED FLAG DETECTOR - ANALYSIS REPORT
-===============================================
-
-Document ID: ${document._id}
-Analysis Date: ${document.createdAt}
-Risk Score: ${document.riskScore}/100
-
-EXTRACTED TEXT:
-${document.text}
-
-IDENTIFIED RISKS:
-${document.clauses.map((clause, idx) => `
-${idx + 1}. [${clause.level}] ${clause.category}
-   Text: ${clause.text}
-   Reason: ${clause.reason}
-`).join('\n')}
-
-END OF REPORT
-`;
-
-  await fs.writeFile(outputPath.replace('.pdf', '.txt'), reportContent);
-  
-  // Copy a placeholder PDF or generate one
-  // In production, this should call your Python model
-  throw new Error('PDF generation requires Python model integration. Please integrate your model in python/model_service.py');
-};
+// NOTE: All PDF generation, text extraction, and preprocessing is done in app/ FastAPI service
+// This function is removed - no text processing should happen in backend
 
