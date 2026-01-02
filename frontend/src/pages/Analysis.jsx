@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import Loader from '../components/Loader';
-import ClauseHighlighter from '../components/ClauseHighlighter';
 import RiskCard from '../components/RiskCard';
-import { openHighlightedPDF } from '../services/api';
+import { downloadHighlightedPDF, openHighlightedPDF } from '../services/api';
 
 const Analysis = () => {
   const location = useLocation();
@@ -12,6 +11,7 @@ const Analysis = () => {
   const [error, setError] = useState(null);
   const [selectedRiskLevel, setSelectedRiskLevel] = useState('All');
   const [isDownloading, setIsDownloading] = useState(false);
+  const [analysisId, setAnalysisId] = useState(null);
 
   useEffect(() => {
     // Get analysis data from navigation state
@@ -24,6 +24,11 @@ const Analysis = () => {
     }
 
     try {
+      // Extract and save analysis_id from response
+      if (data?.analysis_id) {
+        setAnalysisId(data.analysis_id);
+      }
+      
       // Map new backend response to existing UI format
       const mappedData = mapBackendResponseToUI(data);
       setAnalysisData(mappedData);
@@ -35,23 +40,9 @@ const Analysis = () => {
   }, [location.state]);
 
   // Map new backend response structure to existing UI expectations
+  // Note: PDF highlighting is done in app/ directory only
   const mapBackendResponseToUI = (backendData) => {
-    const { document_risk, label_summary, clauses = [], highlighted_pdf_url } = backendData;
-
-    // Combine all clause texts into extracted text
-    // Build text and track positions for accurate highlighting
-    let extractedText = '';
-    const clausePositions = [];
-    
-    clauses.forEach((clause) => {
-      const startPos = extractedText.length;
-      clausePositions.push({
-        clause,
-        start: startPos,
-        end: startPos + clause.clause_text.length,
-      });
-      extractedText += (extractedText ? '\n\n' : '') + clause.clause_text;
-    });
+    const { document_risk, label_summary, clauses = [], highlighted_pdf_url, analysis_id } = backendData;
 
     // Transform clauses and labels into risks array
     const risks = [];
@@ -61,11 +52,6 @@ const Analysis = () => {
           // Map band to risk level (high/medium/low)
           const riskLevel = label.band === 'high' ? 'High' : 
                            label.band === 'medium' ? 'Medium' : 'Low';
-          
-          // Find position in extracted text
-          const position = clausePositions[clauseIndex];
-          const startIndex = position ? position.start : 0;
-          const endIndex = position ? position.end : clause.clause_text.length;
           
           risks.push({
             level: riskLevel,
@@ -81,9 +67,6 @@ const Analysis = () => {
             identity: clause.identity,
             semantic: clause.semantic,
             margin: clause.margin,
-            // For highlighting - position in extracted text
-            startIndex,
-            endIndex,
           });
         });
       }
@@ -93,33 +76,35 @@ const Analysis = () => {
       document_risk: document_risk || 'unknown',
       label_summary: label_summary || {},
       highlighted_pdf_url,
-      extractedText: extractedText || 'No text extracted from document.',
+      analysis_id: analysis_id || null,
       risks,
       originalClauses: clauses, // Keep original for reference if needed
     };
   };
 
-  const handleDownloadReport = () => {
-    if (!analysisData?.highlighted_pdf_url) {
-      alert('No highlighted PDF available.');
+  const handleDownloadReport = async () => {
+    if (!analysisId) {
+      alert('No analysis ID available. Cannot download PDF.');
       return;
     }
+    
     setIsDownloading(true);
     try {
-      openHighlightedPDF(analysisData.highlighted_pdf_url, true);
+      await downloadHighlightedPDF(analysisId);
     } catch (err) {
-      alert('Failed to download PDF. Please try again.');
+      console.error('Download error:', err);
+      // Error is already handled in the downloadHighlightedPDF function
     } finally {
       setIsDownloading(false);
     }
   };
 
-  const handleOpenPDF = () => {
-    if (!analysisData?.highlighted_pdf_url) {
-      alert('No highlighted PDF available.');
+  const handleOpenPDF = async () => {
+    if (!analysisId) {
+      alert('No analysis ID available. Cannot open PDF.');
       return;
     }
-    openHighlightedPDF(analysisData.highlighted_pdf_url, false);
+    await openHighlightedPDF(analysisId);
   };
 
   const filteredRisks = analysisData?.risks
@@ -237,20 +222,25 @@ const Analysis = () => {
                 </div>
               )}
 
-              {/* PDF Actions */}
-              {analysisData?.highlighted_pdf_url && (
+              {/* PDF Actions - Always show when analysis data exists */}
+              {analysisData && (
                 <div className="space-y-2 mb-6">
                   <button
                     onClick={handleOpenPDF}
-                    className="w-full px-4 py-3 rounded-lg font-semibold transition-colors bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl"
+                    disabled={!analysisId}
+                    className={`w-full px-4 py-3 rounded-lg font-semibold transition-colors ${
+                      !analysisId
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-blue-600 text-white hover:bg-blue-700 shadow-lg hover:shadow-xl'
+                    }`}
                   >
                     Open Highlighted PDF
                   </button>
                   <button
                     onClick={handleDownloadReport}
-                    disabled={isDownloading}
+                    disabled={isDownloading || !analysisId}
                     className={`w-full px-4 py-3 rounded-lg font-semibold transition-colors ${
-                      isDownloading
+                      isDownloading || !analysisId
                         ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                         : 'bg-green-600 text-white hover:bg-green-700 shadow-lg hover:shadow-xl'
                     }`}
@@ -290,12 +280,6 @@ const Analysis = () => {
 
           {/* Main Content */}
           <div className="lg:col-span-3 space-y-6">
-            {/* Document Text with Highlights */}
-            <ClauseHighlighter
-              text={analysisData?.extractedText || ''}
-              risks={analysisData?.risks || []}
-            />
-
             {/* Risk Cards */}
             {filteredRisks.length > 0 ? (
               <div>

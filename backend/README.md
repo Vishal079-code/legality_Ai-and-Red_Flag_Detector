@@ -4,21 +4,31 @@ Backend API server for the Legality AI Red Flag Detector application.
 
 ## Features
 
-- File upload handling (PDF, DOCX, Images)
-- OCR text extraction using Tesseract.js and pdf-parse
-- AI-powered risk analysis and clause detection
-- MongoDB storage for documents and analysis results
-- RESTful API endpoints
+- MongoDB storage for documents and analysis results (optional)
+- RESTful API endpoints (health check, basic routes)
+- **NO TEXT EXTRACTION OR PREPROCESSING** - All processing is done in app/ FastAPI service
 
 ## Tech Stack
 
 - Node.js
 - Express.js
-- MongoDB with Mongoose
-- Multer (file uploads)
-- Tesseract.js (OCR)
-- pdf-parse (PDF text extraction)
-- mammoth (DOCX text extraction)
+- MongoDB with Mongoose (optional, for storage)
+- Multer (file uploads - deprecated, use FastAPI directly)
+
+## Important Notes
+
+⚠️ **NO TEXT EXTRACTION OR PREPROCESSING IN BACKEND**
+
+All document processing including:
+- Text extraction (PDF, DOCX, images)
+- OCR processing
+- Document preprocessing
+- Risk analysis
+- PDF highlighting
+
+**MUST be done in the `app/` FastAPI service only.**
+
+The backend should NOT perform any text extraction, OCR, or preprocessing operations.
 
 ## Installation
 
@@ -116,27 +126,31 @@ backend/
 │   ├── uploadRoutes.js
 │   └── analysisRoutes.js
 ├── services/
-│   ├── ocr.js             # OCR and text extraction
-│   └── analyzer.js        # Risk analysis logic
+│   └── (services removed - use app/ FastAPI service for analysis)
 ├── uploads/               # Temporary file storage
 ├── server.js              # Express app entry point
 └── package.json
 ```
 
-## Risk Analysis
+## Document Analysis
 
-The analyzer identifies risky clauses based on:
+Document analysis is handled by the `app/` FastAPI service which provides:
+- ML-based risk analysis using embeddings and rerankers
+- Advanced PDF text extraction with OCR fallback
+- Multi-label clause detection
+- PDF highlighting with risk annotations
 
-- **High Risk**: Liability waivers, indemnification, arbitration clauses, automatic renewals
-- **Medium Risk**: Termination clauses, jurisdiction, modification rights
-- **Low Risk**: Standard communication and boilerplate clauses
-
-Risk score is calculated based on the number and severity of identified risks (0-100 scale).
+The backend should integrate with the FastAPI service at `/analyze` endpoint for document processing.
 
 ## Notes
 
-- Uploaded files are temporarily stored and deleted after processing
-- OCR processing may take time for large images or scanned documents
-- Ensure MongoDB is running before starting the server
+⚠️ **CRITICAL: NO TEXT EXTRACTION OR PREPROCESSING IN BACKEND**
+
+- All text extraction (PDF, DOCX, images) is done in `app/` FastAPI service
+- All OCR processing is done in `app/` FastAPI service  
+- All document preprocessing is done in `app/` FastAPI service
+- Backend should NOT perform any document processing operations
+- Frontend should call FastAPI service directly at `/analyze` endpoint
+- Backend routes are kept for backward compatibility only
 
 

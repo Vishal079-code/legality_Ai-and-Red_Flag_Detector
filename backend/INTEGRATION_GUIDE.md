@@ -1,18 +1,30 @@
-# Python Model Integration Guide
+# Integration Guide
 
-This guide explains how to integrate your Jupyter notebook model into the backend.
+**Note:** The Python model integration has been moved to the `app/` directory, which contains a complete FastAPI implementation with ML-based analysis.
 
-## Step 1: Prepare Your Model Code
+## Current Architecture
 
-Extract the relevant code from your Jupyter notebook:
+The `app/` directory contains:
+- FastAPI service with ML models (embeddings, rerankers, FAISS)
+- Complete document analysis pipeline
+- PDF highlighting functionality
+- Production-ready API endpoints
 
-1. **Model Loading Code** - How you load your trained model
-2. **PDF Analysis Code** - How you analyze PDFs and extract risks
-3. **PDF Highlighting Code** - How you generate PDFs with highlighted risks
+## Integration Options
 
-## Step 2: Update model_service.py
+### Option 1: Use app/ FastAPI Service Directly
 
-Edit `backend/python/model_service.py` and replace the placeholder functions:
+The `app/` FastAPI service provides:
+- `POST /analyze` - Analyze PDF documents
+- `GET /highlight/{analysis_id}` - Download highlighted PDF
+
+The backend should call these endpoints via HTTP instead of using local Python scripts.
+
+### Option 2: Legacy Integration (Deprecated)
+
+The following information is kept for reference only. The `backend/python/` directory has been removed.
+
+**Previous integration steps (no longer applicable):**
 
 ### Update `load_model()`
 
@@ -111,9 +123,9 @@ def generate_highlighted_pdf(pdf_path, output_path, analysis, model=None):
     pass
 ```
 
-## Step 3: Update Requirements
+## Step 3: Update Requirements (Deprecated)
 
-Add your model's dependencies to `backend/python/requirements.txt`:
+Add your model's dependencies to `app/requirements.txt` (if modifying the FastAPI service):
 
 ```txt
 # Your model dependencies
@@ -149,26 +161,27 @@ await document.save();
 // await document.save();
 ```
 
-## Step 5: Test Your Integration
+## Testing the Integration
 
-### Test Python Script Directly
-
-```bash
-cd backend/python
-python model_service.py --input test.pdf --analyze_only
-```
-
-### Test PDF Generation
+### Test FastAPI Service Directly
 
 ```bash
-python model_service.py --input test.pdf --output report.pdf --document_id test123
+cd app
+# Start the FastAPI service
+uvicorn main:app --reload
+
+# Test analysis endpoint
+curl -X POST "http://localhost:8000/analyze" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@test.pdf"
 ```
 
-### Test Through API
+### Test Through Backend API
 
-1. Upload a document: `POST /upload`
-2. Get analysis: `GET /analysis/:id`
-3. Download report: `GET /report/:id`
+1. Ensure FastAPI service is running (`app/`)
+2. Upload a document: `POST /upload` (backend will need to forward to FastAPI)
+3. Get analysis: `GET /analysis/:id`
+4. Download report: `GET /report/:id` (or use FastAPI `/highlight/{analysis_id}`)
 
 ## Step 6: Error Handling
 
@@ -210,23 +223,19 @@ Your `analyze_pdf()` function should return:
 
 ## Troubleshooting
 
-### Python Not Found
-- Ensure Python is in your PATH
-- Use `python3` instead of `python` if needed
-- Update `pythonService.js` to use correct Python command
+### FastAPI Service Not Running
+- Start the FastAPI service: `cd app && uvicorn main:app`
+- Check service is accessible at `http://localhost:8000`
+- Verify CORS settings allow backend requests
 
-### Model Import Errors
-- Check all dependencies are installed
-- Verify model file paths
-- Add model directory to Python path
-
-### PDF Generation Fails
-- Check file permissions
-- Verify output directory exists
-- Ensure PDF libraries are installed
+### Model Loading Errors
+- Check all dependencies in `app/requirements.txt` are installed
+- Verify model file paths in `app/config.py`
+- Check FAISS index and metadata files exist
 
 ### Integration Issues
-- Check Python script output format matches expected JSON
-- Verify file paths are correct
-- Check Node.js can spawn Python processes
+- Ensure backend can make HTTP requests to FastAPI service
+- Check API endpoint URLs match between services
+- Verify response format matches expected schema
+- Review CORS configuration if requests are blocked
 

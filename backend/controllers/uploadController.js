@@ -1,8 +1,7 @@
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { extractText } from '../services/ocr.js';
-import { analyzeText } from '../services/analyzer.js';
+// Note: OCR and analysis services removed - use app/ FastAPI service instead
 import Document from '../models/Document.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -13,7 +12,10 @@ const uploadsDir = path.join(__dirname, '../uploads');
 fs.mkdir(uploadsDir, { recursive: true }).catch(console.error);
 
 /**
- * Handle file upload, OCR, and analysis
+ * Handle file upload - NO TEXT EXTRACTION OR PREPROCESSING
+ * All text extraction, preprocessing, and analysis is done in app/ FastAPI service
+ * This endpoint is kept for backward compatibility but should not be used
+ * Frontend should call FastAPI service directly at /analyze endpoint
  */
 export const uploadDocument = async (req, res) => {
   try {
@@ -24,76 +26,16 @@ export const uploadDocument = async (req, res) => {
       });
     }
 
+    // Clean up uploaded file immediately - no processing done here
     const filePath = req.file.path;
-    const mimeType = req.file.mimetype;
-    const fileName = req.file.originalname;
+    await fs.unlink(filePath).catch(console.error);
 
-    console.log(`Processing file: ${fileName}, Type: ${mimeType}`);
-
-    // Extract text using OCR
-    let extractedText;
-    try {
-      extractedText = await extractText(filePath, mimeType);
-      
-      if (!extractedText || extractedText.trim().length === 0) {
-        // Clean up uploaded file
-        await fs.unlink(filePath);
-        
-        return res.status(400).json({
-          success: false,
-          message: 'Could not extract text from the document. Please ensure the document contains readable text.',
-        });
-      }
-    } catch (ocrError) {
-      // Clean up uploaded file
-      await fs.unlink(filePath).catch(console.error);
-      
-      console.error('OCR Error:', ocrError);
-      return res.status(500).json({
-        success: false,
-        message: 'Error extracting text from document',
-        error: ocrError.message,
-      });
-    }
-
-    // Analyze the extracted text
-    const { clauses, riskScore } = analyzeText(extractedText);
-
-    // For PDF files, keep the original file for report generation
-    // For other file types, we can delete after processing
-    let permanentFilePath = null;
-    
-    if (mimeType === 'application/pdf') {
-      // Move PDF to permanent storage for report generation
-      const storageDir = path.join(__dirname, '../storage');
-      await fs.mkdir(storageDir, { recursive: true });
-      permanentFilePath = path.join(storageDir, `${Date.now()}-${fileName}`);
-      await fs.rename(filePath, permanentFilePath);
-    }
-    
-    // Save to database
-    const document = new Document({
-      text: extractedText,
-      clauses,
-      riskScore,
-      fileName,
-      fileType: mimeType,
-      originalFilePath: permanentFilePath || filePath, // Store path for PDF generation
-    });
-
-    await document.save();
-    
-    // Clean up uploaded file if not PDF (PDFs are kept for report generation)
-    if (mimeType !== 'application/pdf') {
-      await fs.unlink(filePath).catch(console.error);
-    }
-
-    console.log(`Document processed successfully. ID: ${document._id}, Risks found: ${clauses.length}`);
-
-    res.status(200).json({
-      success: true,
-      documentId: document._id.toString(),
-      message: 'Document uploaded and analyzed successfully',
+    // Return error directing to use FastAPI service
+    return res.status(503).json({
+      success: false,
+      message: 'This endpoint is deprecated. All document processing (text extraction, preprocessing, analysis) is handled by the app/ FastAPI service.',
+      hint: 'Use the FastAPI /analyze endpoint directly from the frontend. No text extraction or preprocessing is done in the backend.',
+      fastapiEndpoint: '/analyze',
     });
   } catch (error) {
     console.error('Upload error:', error);
@@ -105,7 +47,7 @@ export const uploadDocument = async (req, res) => {
 
     res.status(500).json({
       success: false,
-      message: 'Error processing document',
+      message: 'Error handling upload',
       error: error.message,
     });
   }
