@@ -4,7 +4,7 @@ const FASTAPI_BASE_URL = import.meta.env.VITE_FASTAPI_BASE_URL || 'https://kalei
 // Mock API mode: Set to true to use mock responses, false to use real API
 // You can also control this via environment variable: VITE_USE_MOCK_API=false
 // Default is true (mock mode enabled)
-const USE_MOCK_API = import.meta.env.VITE_USE_MOCK_API !== 'false';
+const USE_MOCK_API=false;
 
 /**
  * Generate a mock analysis response matching DocumentAnalysisResponse schema
