@@ -29,7 +29,7 @@ const Analysis = () => {
         setAnalysisId(data.analysis_id);
       }
       
-      // Map new backend response to existing UI format
+      // Map FastAPI response to existing UI format
       const mappedData = mapBackendResponseToUI(data);
       setAnalysisData(mappedData);
     } catch (err) {
@@ -39,7 +39,7 @@ const Analysis = () => {
     }
   }, [location.state]);
 
-  // Map new backend response structure to existing UI expectations
+  // Map FastAPI response structure to existing UI expectations
   // Note: PDF highlighting is done in app/ directory only
   const mapBackendResponseToUI = (backendData) => {
     const { document_risk, label_summary, clauses = [], highlighted_pdf_url, analysis_id } = backendData;
