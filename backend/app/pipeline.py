@@ -228,7 +228,7 @@ def analyze_clauses(chunks: List[Dict], dedup: bool = True) -> List[Dict]:
             "identity": score_out["identity"],
             "semantic": score_out["semantic"],
             "margin": score_out["margin"],
-            "top_matches": score_out["top_matches"],
+            # "top_matches": score_out["top_matches"],
             "labels": risky_labels
         })
 
@@ -260,8 +260,8 @@ def analyze_clauses(chunks: List[Dict], dedup: bool = True) -> List[Dict]:
             "labels": merged_labels,
             "identity": rep["identity"],
             "semantic": rep["semantic"],
-            "margin": rep["margin"],
-            "top_matches": rep["top_matches"]
+            "margin": rep["margin"]
+            # "top_matches": rep["top_matches"]
         })
 
     # optional: sort final_clauses by descending highest label final_score

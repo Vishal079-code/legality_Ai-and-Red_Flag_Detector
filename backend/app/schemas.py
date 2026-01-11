@@ -27,7 +27,7 @@ class ClauseResult(BaseModel):
     identity: float = Field(..., ge=0.0, le=1.0, description="Identity match score")
     semantic: float = Field(..., ge=0.0, le=1.0, description="Semantic similarity score")
     margin: float = Field(..., description="Margin score")
-    top_matches: List[Dict[str, Any]] = Field(..., description="Top matching reference clauses")
+    # top_matches: List[Dict[str, Any]] = Field(..., description="Top matching reference clauses")
 
 
 class LabelSummary(BaseModel):
@@ -74,7 +74,7 @@ class DocumentAnalysisResponse(BaseModel):
                             "identity": 0.95,
                             "semantic": 0.82,
                             "margin": 0.15,
-                            "top_matches": []
+                            # "top_matches": []
                         }
                     ]
                 }
