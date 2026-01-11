@@ -119,3 +119,4 @@ legality_Ai-and-Red_Flag_Detector/
 - **Backend connection errors:** Verify that the ngrok URL in your frontend configuration matches the one provided by Colab
 - **Missing FAISS files:** Ensure both the `app` and `FAISS` directories are correctly copied to `MyBackUp` folder in My Drive in your Google Drive
 - **ngrok authentication errors:** Verify that you've correctly added the `NGROK_AUTH_TOKEN` secret in Colab's Secrets section (left panel key icon)
+- **Too slow processing:** Make sure you're using **T4-GPU** runtime
