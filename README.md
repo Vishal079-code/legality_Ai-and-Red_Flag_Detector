@@ -1,4 +1,4 @@
-# Legality AI and Red Flag Detector
+# Legality AI Red Flag Detector
 
 This application analyzes legal documents (PDFs) to detect red flags and risky clauses using AI-powered analysis. The frontend is built with React and Vite, while the backend runs on Google Colab using FastAPI.
 
@@ -8,6 +8,10 @@ This application analyzes legal documents (PDFs) to detect red flags and risky c
 - A Google account with access to Google Drive
 - Google Colab access
 - An ngrok account (create one at [ngrok.com](https://ngrok.com))
+
+## Architecture
+
+For detailed technical architecture, methodologies, and implementation details, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 ## Setup Instructions
 
@@ -49,7 +53,7 @@ The backend runs on Google Colab. Follow these steps to set it up:
    - https://colab.research.google.com/drive/19kEiTkGAKQhmbz4ohfY7tFaHkdcW59N_?usp=sharing: `Save a copy in Drive` if required 
    - The notebook will mount your Google Drive and access the `app` and `FAISS` directories from the `MyBackUp` folder in My Drive.
    - All required Python dependencies will be automatically installed when you run the notebook cells
-
+   - **Make Sure to use T4-GPU runtime**. 
 4. **Run the Backend:**
    - Follow the instructions in the Colab notebook to start the FastAPI server
    - The notebook will provide you with an ngrok URL to access the backend API (e.g., `https://xxxx-xxxx-xxxx.ngrok-free.dev`)
@@ -69,7 +73,7 @@ The backend runs on Google Colab. Follow these steps to set it up:
 
 ## Test PDF
 
-A test PDF file is provided in the root directory of this repository. You can use this file to test the application's functionality after setting up both the frontend and backend.
+A test PDF file, **MEDALISTDIVERSIFIEDREIT%2CINC_05_18_2020-EX-10.1-CONSULTING%20AGREEMENT**, is provided in the root directory of this repository. You can use this file to test the application's functionality after setting up both the frontend and backend.
 
 ## Project Structure
 
@@ -86,7 +90,8 @@ legality_Ai-and-Red_Flag_Detector/
 │   ├── FAISS/         # FAISS index files (copy to Google Drive)
 │   ├── data/          # Dataset files
 │   └── requirements.txt
-└── README.md          # This file
+└── README.md
+└── MEDALISTDIVERSIFIEDREIT%2CINC_05_18_2020-EX-10.1-CONSULTING%20AGREEMENT.PDF # Test file to upload
 ```
 
 ## Usage

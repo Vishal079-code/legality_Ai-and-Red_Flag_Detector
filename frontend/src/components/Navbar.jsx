@@ -43,7 +43,7 @@ const Navbar = () => {
             >
               Upload
             </Link>
-            <Link
+            {/* <Link
               to="/analysis"
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 isActive('/analysis')
@@ -52,7 +52,7 @@ const Navbar = () => {
               }`}
             >
               Analysis
-            </Link>
+            </Link> */}
           </div>
         </div>
       </div>
