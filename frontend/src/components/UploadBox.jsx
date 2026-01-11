@@ -121,7 +121,7 @@ const UploadBox = ({ onFileSelect, acceptedTypes = '.pdf,.doc,.docx,.jpg,.jpeg,.
               </button>
             </div>
             <p className="text-xs text-gray-400 mt-4">
-              Supported formats: PDF, DOC, DOCX, JPG, PNG
+              Supported formats: PDF
             </p>
           </div>
         ) : (

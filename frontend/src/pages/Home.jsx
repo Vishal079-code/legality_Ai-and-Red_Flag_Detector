@@ -43,7 +43,7 @@ const Home = () => {
               Easy Upload
             </h3>
             <p className="text-gray-600">
-              Drag and drop your documents (PDF, DOCX, images) for instant analysis.
+              Drag and drop your documents (PDF) for instant analysis.
             </p>
           </div>
 
@@ -112,7 +112,7 @@ const Home = () => {
                 Upload Document
               </h3>
               <p className="text-gray-600">
-                Upload your legal document in PDF, DOCX, or image format.
+                Upload your legal document in PDF.
               </p>
             </div>
             <div className="text-center">

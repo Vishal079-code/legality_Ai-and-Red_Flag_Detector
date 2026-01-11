@@ -89,10 +89,10 @@ const Upload = () => {
           </h2>
           <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-600">
             <div>
-              <span className="font-medium">Documents:</span> PDF, DOC, DOCX
+              <span className="font-medium">Documents:</span> PDF
             </div>
             <div>
-              <span className="font-medium">Images:</span> JPG, JPEG, PNG
+              {/* <span className="font-medium">Images:</span> JPG, JPEG, PNG */}
             </div>
           </div>
           <p className="text-xs text-gray-500 mt-4">
